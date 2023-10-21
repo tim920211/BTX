@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>B.T</title>
+  <style>
+        body {
+            font-family: "Helvetica", "Arial","LiHei Pro","微軟正黑體",sans-serif;
+        }
+
+        .chat-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .user-message {
+            color: blue;
+        }
+
+        .assistant-message {
+            color: green;
+        }
+
+        .input-container {
+            margin-top: 10px;
+        }
+	 body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    flex-direction: column; /* 可选，使内容垂直居中 */
+}
+
+.container {
+     border: 1px solid #ccc;
+    width: 500px; /* 调整聊天框的宽度 */
+    height: 300px; /* 调整聊天框的高度，使其与宽度相等 */
+    overflow-y: scroll;
+    display: flex; /* 使用Flexbox布局 */
+    flex-direction: column; /* 垂直布局 */
+    justify-content: flex-end; /* 使消息从底部开始显示 */
+}
+
+    </style>
+</head>
+
+<body>
+	 <div class="hhh">
+	<h1>B.T</h1>
+    </div>
+    <div class="chat-container" id="chat-container">
+        <div class="message assistant-message">聊天！</div>
+    </div>
+
+    <div class="input-container">
+        <input type="file" id="file-input">
+        <button onclick="sendImage()">上传照片</button>
+        <br>
+        <input type="text" id="message-input" placeholder="输入消息">
+        <button onclick="sendMessage()">发送</button>
+    </div>
+
+    <script>
+        function sendMessage() {
+            var messageInput = document.getElementById('message-input');
+            var messageText = messageInput.value;
+
+            if (messageText.trim() !== '') {
+                var chatContainer = document.getElementById('chat-container');
+
+                var userMessage = document.createElement('div');
+                userMessage.classList.add('message', 'user-message');
+                userMessage.textContent = messageText;
+
+                chatContainer.appendChild(userMessage);
+                messageInput.value = '';
+
+                var assistantMessage = document.createElement('div');
+                assistantMessage.classList.add('message', 'assistant-message');
+                assistantMessage.textContent = '这是B.T的回复。';
+
+                chatContainer.appendChild(assistantMessage);
+
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function sendImage() {
+            var fileInput = document.getElementById('file-input');
+            var file = fileInput.files[0];
+
+            if (file) {
+                var chatContainer = document.getElementById('chat-container');
+
+                var userMessage = document.createElement('div');
+                userMessage.classList.add('message', 'user-message');
+
+                var imageElement = document.createElement('img');
+                imageElement.src = URL.createObjectURL(file);
+                imageElement.style.maxWidth = '300px';
+                userMessage.appendChild(imageElement);
+
+                chatContainer.appendChild(userMessage);
+
+                fileInput.value = '';
+
+                var assistantMessage = document.createElement('div');
+                assistantMessage.classList.add('message', 'assistant-message');
+                assistantMessage.textContent = '这是B.T的回复。';
+
+                chatContainer.appendChild(assistantMessage);
+
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+    </script>
+<p class="online-count">当前在线人数：0</p>
+
+<script>
+   var onlineCount = 0;
+
+const socket = new WebSocket('ws://localhost:3000'); // 替换为你的WebSocket服务器地址
+
+socket.addEventListener('open', function(event) {
+    onlineCount++;
+    updateOnlineCount();
+});
+
+socket.addEventListener('close', function(event) {
+    if (onlineCount > 0) {
+        onlineCount--;
+    }
+    updateOnlineCount();
+});
+
+function updateOnlineCount() {
+    var onlineCountElement = document.querySelector('.online-count');
+    onlineCountElement.textContent = "当前在线人数：" + onlineCount;
+}
+
+</script>
+<script>
+    function checkPassword() {
+        var password = document.getElementById('password').value;
+
+        if (password === 'B.T.X') {
+            window.location.href = '/chat';
+        } else if (password === 'Tim920211') {
+            window.location.href = '/admin';
+        } else {
+            alert('密码错误，请重试！');
+        }
+    }
+</script>
+
+
+<div class="input-container" style="display:none;">
+    <input type="file" id="file-inputha">
+    <button onclick="sendImage()">上传照片</button>
+    <br>
+    <input type="text" id="message-inputha" placeholder="输入消息">
+    <button onclick="sendMessage()">发送</button>
+</div>
+
+<div class="code-editor" id="code-editor" style="display:none;">
+    <textarea id="code"></textarea>
+    <button onclick="saveCode()">保存代码</button>
+</div>
+
+<script>
+    function checkPassword() {
+        var password = document.getElementById('password').value;
+
+        if (password === 'Tim920211') {
+            // 密码正确，显示后台管理界面
+            document.getElementById('password').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'block';
+            document.querySelector('.input-container').style.display = 'block';
+            document.getElementById('code-editor').style.display = 'block';
+        } else {
+            alert('密码错误，请重试！');
+        }
+    }
+
+    function sendMessage() {
+        var messageInput = document.getElementById('message-input');
+        var messageText = messageInput.value;
+
+        if (messageText.trim() !== '') {
+            var chatContainer = document.getElementById('chat-container');
+
+            var adminMessage = document.createElement('div');
+            adminMessage.classList.add('message', 'admin-message');
+            adminMessage.textContent = messageText;
+
+            chatContainer.appendChild(adminMessage);
+            messageInput.value = '';
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+
+    function sendImage() {
+        var fileInput = document.getElementById('file-input');
+        var file = fileInput.files[0];
+
+        if (file) {
+            var chatContainer = document.getElementById('chat-container');
+
+            var adminMessage = document.createElement('div');
+            adminMessage.classList.add('message', 'admin-message');
+
+            var imageElement = document.createElement('img');
+            imageElement.src = URL.createObjectURL(file);
+            imageElement.style.maxWidth = '300px';
+            adminMessage.appendChild(imageElement);
+
+            chatContainer.appendChild(adminMessage);
+
+            fileInput.value = '';
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+
+    function saveCode() {
+        var codeInput = document.getElementById('code');
+        var codeText = codeInput.value;
+
+        // 在这里添加保存代码的逻辑
+        // 例如发送到后端进行保存
+        alert('代码已保存！');
+    }
+</script>
+	<div id="chat-mode-selector" style="display:block;">
+    <label for="chat-mode">选择聊天模式：</label>
+    <select id="chat-mode" onchange="toggleChatMode()">
+        <option value="all">多人</option>
+        <option value="admin">個人</option>
+    </select>
+</div>
+
+<script>
+    function toggleChatMode() {
+        var modeSelector = document.getElementById('chat-mode');
+        var selectedMode = modeSelector.value;
+
+        if (selectedMode === 'admin') {
+            // 显示与管理员聊天的UI，隐藏其他聊天室的UI
+        } else {
+            // 显示所有人聊天的UI，隐藏其他聊天室的UI
+        }
+    }
+</script>
+	
+<script>
+    // 當網頁載入時
+    window.onload = function() {
+        // 獲取聊天對話的容器
+        var chatContainer = document.getElementById("chat-container");
+        
+        // 當瀏覽器窗口被關閉時
+        window.onbeforeunload = function() {
+            // 刪除聊天對話
+            chatContainer.innerHTML = "";
+        }
+    }
+</script>
+</body>
+	</html>
+	
