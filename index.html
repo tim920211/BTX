@@ -1,279 +1,775 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<title>B.T</title>
-  <style>
-        body {
-            font-family: "Helvetica", "Arial","LiHei Pro","微軟正黑體",sans-serif;
-        }
-
-        .chat-container {
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 300px;
-            overflow-y: scroll;
-        }
-
-        .message {
-            margin-bottom: 10px;
-        }
-
-        .user-message {
-            color: blue;
-        }
-
-        .assistant-message {
-            color: green;
-        }
-
-        .input-container {
-            margin-top: 10px;
-        }
-	 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    flex-direction: column; /* 可选，使内容垂直居中 */
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTX 桌遊
+ v1.1.9</title>
+<style>
+body{margin:0;background:#0f1221;color:#e9ebf1;font-family:system-ui,Segoe UI,Roboto}
+header{background:#151933;padding:10px;border-bottom:1px solid #333}
+h1{margin:0;font-size:18px}
+.container{padding:10px}
+.panel{background:#1c1f3c;border:1px solid #333;border-radius:8px;padding:10px;margin:10px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.col{flex:1 1 320px}
+.card{background:#11152c;border:1px solid #444;border-radius:8px;padding:8px;margin:4px;min-width:170px;max-width:240px}
+.big{font-size:24px;font-weight:bold}
+.small{font-size:12px;color:#bbb}
+.log{font:12px monospace;white-space:pre-wrap;background:#0b0e1c;padding:8px;border-radius:6px;height:180px;overflow:auto}
+button{
+  background:#2c3160;color:#fff;border:1px solid #555;
+  padding:8px 12px;border-radius:8px;margin:2px;
+  transition:transform .08s, filter .12s, box-shadow .12s, background .12s;
+  cursor:pointer
 }
-
-.container {
-     border: 1px solid #ccc;
-    width: 500px; /* 调整聊天框的宽度 */
-    height: 300px; /* 调整聊天框的高度，使其与宽度相等 */
-    overflow-y: scroll;
-    display: flex; /* 使用Flexbox布局 */
-    flex-direction: column; /* 垂直布局 */
-    justify-content: flex-end; /* 使消息从底部开始显示 */
-}
-
-    </style>
+button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
+button.btn-press{transform:scale(0.94);filter:brightness(1.25);box-shadow:0 0 0 3px rgba(255,255,255,.18) inset;}
+.badge{display:inline-block;background:#334;color:#9fe;padding:2px 6px;border-radius:6px;font-size:12px;margin-left:6px}
+.badge.warn{background:#5a2d3a;color:#ffd5de}
+.badge.ok{background:#274a3f;color:#bfffe8}
+</style>
 </head>
-
 <body>
-	 <div class="hhh">
-	<h1>B.T</h1>
+<header><h1>【BTX】  v1.1.9（雙人同機）</h1></header>
+<div class="container">
+
+<!-- 開局設定 -->
+<div class="panel" id="setup">
+  <div class="row">
+    <div class="col">
+      玩家A屬性：
+      <select id="p0-elem" onchange="updateRoleOptions(0)">
+        <option value="W">水</option><option value="F">火</option>
+        <option value="E">土</option><option value="L">光</option>
+        <option value="D">暗</option><option value="C">清</option>
+      </select><br>
+      玩家A角色：<select id="p0-role"></select>
     </div>
-    <div class="chat-container" id="chat-container">
-        <div class="message assistant-message">聊天！</div>
+    <div class="col">
+      玩家B屬性：
+      <select id="p1-elem" onchange="updateRoleOptions(1)">
+        <option value="F">火</option><option value="W">水</option>
+        <option value="E">土</option><option value="L">光</option>
+        <option value="D">暗</option><option value="C">清</option>
+      </select><br>
+      玩家B角色：<select id="p1-role"></select>
     </div>
+  </div>
+  <button id="startBtn">開始對局</button>
+</div>
 
-    <div class="input-container">
-        <input type="file" id="file-input">
-        <button onclick="sendImage()">上传照片</button>
-        <br>
-        <input type="text" id="message-input" placeholder="输入消息">
-        <button onclick="sendMessage()">发送</button>
-    </div>
+<!-- 對局 -->
+<div class="panel" id="board" style="display:none">
+  <div>
+    <span id="turnTag"></span> |
+    <button id="btnEnd">結束回合</button>
+  </div>
+  <div class="row">
+    <div class="col" id="p0-panel"></div>
+    <div class="col" id="p1-panel"></div>
+  </div>
+</div>
 
-    <script>
-        function sendMessage() {
-            var messageInput = document.getElementById('message-input');
-            var messageText = messageInput.value;
+<!-- 戰報 -->
+<div class="panel" id="logPanel" style="display:none"><h3>戰報</h3><div id="log" class="log"></div></div>
 
-            if (messageText.trim() !== '') {
-                var chatContainer = document.getElementById('chat-container');
-
-                var userMessage = document.createElement('div');
-                userMessage.classList.add('message', 'user-message');
-                userMessage.textContent = messageText;
-
-                chatContainer.appendChild(userMessage);
-                messageInput.value = '';
-
-                var assistantMessage = document.createElement('div');
-                assistantMessage.classList.add('message', 'assistant-message');
-                assistantMessage.textContent = '这是B.T的回复。';
-
-                chatContainer.appendChild(assistantMessage);
-
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }
-
-        function sendImage() {
-            var fileInput = document.getElementById('file-input');
-            var file = fileInput.files[0];
-
-            if (file) {
-                var chatContainer = document.getElementById('chat-container');
-
-                var userMessage = document.createElement('div');
-                userMessage.classList.add('message', 'user-message');
-
-                var imageElement = document.createElement('img');
-                imageElement.src = URL.createObjectURL(file);
-                imageElement.style.maxWidth = '300px';
-                userMessage.appendChild(imageElement);
-
-                chatContainer.appendChild(userMessage);
-
-                fileInput.value = '';
-
-                var assistantMessage = document.createElement('div');
-                assistantMessage.classList.add('message', 'assistant-message');
-                assistantMessage.textContent = '这是B.T的回复。';
-
-                chatContainer.appendChild(assistantMessage);
-
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }
-    </script>
-<p class="online-count">当前在线人数：0</p>
-
+</div>
 <script>
-   var onlineCount = 0;
+/* ========= 常量 ========= */
+const ELEM={W:"水",F:"火",E:"土",L:"光",D:"暗",C:"清"};
+const ROLE={ZM:"渣男",ZN:"渣女",NM:"暖男",NW:"暖女",CL:"清流"};
+const ALLOWED={ W:['ZN','NM'], F:['ZM','NW'], E:['ZN','NW'], D:['ZM','ZN'], L:['ZM','NW'], C:['CL'] };
+const ROLEINFO={
+  "W_ZN":"被動：啟動→對手『下次抽牌』-1（一次）。",
+  "W_NM":"被動：啟動→若本回合受傷，回合末回 1。",
+  "F_ZM":"被動：啟動→選擇丟 1 張牌，本回合攻擊 +1。",
+  "F_NW":"被動：啟動→消耗 1 能量，本回合攻擊 +1。",
+  "E_ZN":"被動：啟動→對手『下次普攻前』須隨機棄 1。",
+  "E_NW":"被動：啟動→本回合受到傷害 -1。",
+  "D_ZM":"被動：啟動→本回首次被攻擊時，若對手有能量，偷 1（可用），到你的回合結束歸還。",
+  "D_ZN":"被動：啟動→對手本回第一次『打出技能/事件』須隨機棄 1。",
+  "L_ZM":"被動：啟動→依血量本回攻擊 +1 / +2（≤10 / ≤5）。",
+  "L_NW":"被動：啟動→本回第一次受傷無效。",
+  "C_CL":"被動：啟動→抽 1。"
+};
+const ROLE_DAMAGE={ ZM:2, ZN:2, NM:1, NW:1, CL:1 };
 
-const socket = new WebSocket('ws://localhost:3000'); // 替换为你的WebSocket服务器地址
+/* ========= 卡池（示範；之後把整包 83 張直接替換這個陣列） ========= */
+const CARDS = [
+  // 能量卡 12 張
+  ...Array.from({length:12}, (_,i)=>({
+    id:"EN"+(i+1), type:"energy", elem:"C", name:"能量", cost:0,
+    desc:"放到場上提供 1 點能量（最多 10）。每回合重置『可用額度』；能量牌不會丟。"
+  })),
 
-socket.addEventListener('open', function(event) {
-    onlineCount++;
-    updateOnlineCount();
-});
+  /* 🔥 火 */
+  {id:"F01", type:"skill", elem:"F", name:"狠話直球", cost:2, desc:"對單體 4 傷。", effect:(me)=>deal(me,opp(me),4)},
+  {id:"F02", type:"skill", elem:"F", name:"玻璃心爆炸", cost:3, desc:"對所有敵方各 2 傷（1v1 等同單體 2）。", effect:(me)=>dealAllOpp(me,2)},
+  {id:"F03", type:"skill", elem:"F", name:"三分鐘熱度", cost:3, desc:"回 2；本回合攻擊 +1。", effect:(me)=>{heal(me,2); addTag(me,"atk+1",1)}},
+  {id:"F04", type:"skill", elem:"F", name:"已讀不回", cost:4, desc:"對單體 5 傷（原規：此回合不能再用技能）。", effect:(me)=>{deal(me,opp(me),5);log('提示：本回建議不再用技能（未強制）')}},
+  {id:"F05", type:"skill", elem:"F", name:"火速封鎖", cost:2, desc:"使對手下回合不能普通攻擊。", effect:(me)=>blockAttack(opp(me))},
+  {id:"F06", type:"skill", elem:"F", name:"非常火大", cost:3, desc:"本回合攻擊 +2。", effect:(me)=>addTag(me,"atk+2",1)},
+  {id:"F07", type:"skill", elem:"F", name:"怒火上頭", cost:1, desc:"對單體 1 傷（原規：若本回已用火卡則 2 傷）。", effect:(me)=>{deal(me,opp(me),1);log('提示：若本回已用火卡應為 2 傷')}} ,
+  {id:"F08", type:"skill", elem:"F", name:"吵架高手", cost:2, desc:"對單體 2 傷；土屬 +1。", effect:(me)=>{const t=opp(me);deal(me,t,2+(t.elem==='E'?1:0))}},
+  // 火角色專屬
+  {id:"RF01", type:"skill", elem:"F", name:"煉獄火球（渣男專）", cost:3, desc:"對單體 3 傷；若對手土屬 +2。", effect:(me)=>{const t=opp(me);deal(me,t,3+(t.elem==='E'?2:0))}},
+  {id:"NF01", type:"skill", elem:"F", name:"炙熱衝擊（暖女專）", cost:2, desc:"對單體 2 傷；其下回合攻擊 -1（提示）。", effect:(me)=>{deal(me,opp(me),2);log('提示：目標下回合攻擊 -1（未強制）')}},
 
-socket.addEventListener('close', function(event) {
-    if (onlineCount > 0) {
-        onlineCount--;
-    }
-    updateOnlineCount();
-});
+  /* 💧 水 */
+  {id:"W01", type:"skill", elem:"W", name:"哭給你看", cost:2, desc:"對單體 3 傷，抽 1。", effect:(me)=>{deal(me,opp(me),3);draw(me,1)}},
+  {id:"W02", type:"skill", elem:"W", name:"情緒勒索", cost:3, desc:"回 1；封鎖對手行動 1 回合（此版＝禁止普攻）。", effect:(me)=>{heal(me,1);blockAttack(opp(me))}},
+  {id:"W03", type:"skill", elem:"W", name:"購物時間", cost:3, desc:"回 3。", effect:(me)=>heal(me,3)},
+  {id:"W04", type:"skill", elem:"W", name:"洗手", cost:3, desc:"抽 1 回 1（原規：或重用棄牌技能）。", effect:(me)=>{draw(me,1);heal(me,1)}},
+  {id:"W05", type:"skill", elem:"W", name:"欲情故縱", cost:4, desc:"對單體 3 傷（原規：持續兩回合）。", effect:(me)=>deal(me,opp(me),3)},
+  {id:"W06", type:"skill", elem:"W", name:"回憶洗版", cost:5, desc:"對單體 6 傷；若對手火屬 7 傷。", effect:(me)=>{const t=opp(me);deal(me,t,t.elem==='F'?7:6)}},
+  {id:"W07", type:"skill", elem:"W", name:"擺脫渣男", cost:3, desc:"棄 3 → 從牌堆取 2 張能量到手（提示）。", effect:(me)=>log('提示：請手動棄3，從牌堆取 2 張【能量】到手')},
+  {id:"W08", type:"skill", elem:"W", name:"逛街5小時", cost:1, desc:"對單體 2 傷，抽 1。", effect:(me)=>{deal(me,opp(me),2);draw(me,1)}},
+  {id:"W09", type:"skill", elem:"W", name:"喝水身體好", cost:2, desc:"回 1；獲得下次受傷 -1。", effect:(me)=>{heal(me,1);addTag(me,'armor-1',1)}},
+  // 水角色專屬
+  {id:"RW01", type:"skill", elem:"W", name:"冰霜屏障（渣女專）", cost:2, desc:"回 1；下回合免疫一次技能攻擊（近似：-3 減傷）。", effect:(me)=>{heal(me,1);addTag(me,'-3dmg',1)}},
+  {id:"NW01", type:"skill", elem:"W", name:"潮汐湧動（暖男專）", cost:2, desc:"對單體 2 傷；敵方下回合技能耗能 +1。", effect:(me)=>{deal(me,opp(me),2);addTag(opp(me),'skillCost+1',1)}},
 
-function updateOnlineCount() {
-    var onlineCountElement = document.querySelector('.online-count');
-    onlineCountElement.textContent = "当前在线人数：" + onlineCount;
+  /* ⛰️ 土 */
+  {id:"E01", type:"skill", elem:"E", name:"死纏爛打", cost:3, desc:"對單體 4 傷；其攻擊 -1（提示）。", effect:(me)=>{deal(me,opp(me),4);log('提示：目標攻擊 -1（未強制）')}} ,
+  {id:"E02", type:"skill", elem:"E", name:"厚臉皮", cost:2, desc:"本回合核心受傷 -3。", effect:(me)=>addTag(me,'-3dmg',1)},
+  {id:"E03", type:"skill", elem:"E", name:"原地睡覺", cost:4, desc:"回 5（多人原規：總計 5 自由分配）。", effect:(me)=>heal(me,5)},
+  {id:"E04", type:"skill", elem:"E", name:"死心眼", cost:2, desc:"隨機角色攻擊 -2，持續2回合（提示）。", effect:(me)=>log('提示：隨機角色攻擊 -2，持續 2 回合（未強制）')},
+  {id:"E05", type:"skill", elem:"E", name:"不放手", cost:4, desc:"對敵 6 傷；自己也受 2 傷。", effect:(me)=>{deal(me,opp(me),6);deal(me,me,2)}},
+  {id:"E06", type:"skill", elem:"E", name:"頑固到底", cost:3, desc:"本回合攻擊 +1（原規：本回合無敵）。", effect:(me)=>addTag(me,"atk+1",1)},
+  {id:"E07", type:"skill", elem:"E", name:"琢磨不定", cost:3, desc:"從牌組找 1 張能量加入手牌，再把手上 1 張能量置底（提示）。", effect:(me)=>log('提示：請從牌組找 1 張能量到手，並將手上 1 張能量放到底部')},
+  {id:"E08", type:"skill", elem:"E", name:"這是命令！", cost:1, desc:"對單體 1 傷；若目標本回已行動，+1（提示）。", effect:(me)=>{deal(me,opp(me),1);log('提示：若目標已行動，應額外 +1')}} ,
+  {id:"E09", type:"skill", elem:"E", name:"我就爛", cost:2, desc:"我方本回合受到傷害 -1；若敵方為火屬則 -2（此版給 -1，火屬提示）。", effect:(me)=>{addTag(me,'armor-1',1);if(opp(me).elem==='F')log('提示：遇火屬應為 -2')}} ,
+  // 土角色專屬
+  {id:"RE01", type:"skill", elem:"E", name:"地動山搖（渣女專）", cost:3, desc:"對所有敵方各 1 傷；對手下回合不能用事件卡。", effect:(me)=>{dealAllOpp(me,1);addTag(opp(me),'blockEvent',1)}},
+  {id:"NE01", type:"skill", elem:"E", name:"岩石護甲（暖女專）", cost:1, desc:"本回合我方受到傷害 -2（1v1：自己 -2）。", effect:(me)=>{addTag(me,'-3dmg',1);addTag(me,'armor-1',1)}},
+
+  /* ✨ 光 */
+  {id:"L01", type:"skill", elem:"L", name:"假笑", cost:3, desc:"對單體 4 傷；暗屬 +2。", effect:(me)=>{const t=opp(me);deal(me,t,4+(t.elem==='D'?2:0))}},
+  {id:"L02", type:"skill", elem:"L", name:"貼心提醒", cost:2, desc:"回 4。", effect:(me)=>heal(me,4)},
+  {id:"L03", type:"skill", elem:"L", name:"剛睡醒", cost:4, desc:"本回合免疫攻擊（近似：一次免傷＋-3 減傷）。", effect:(me)=>{addTag(me,'enableNullify',1);addTag(me,'-3dmg',1)}},
+  {id:"L04", type:"skill", elem:"L", name:"早安問候", cost:4, desc:"對單體 5 傷。", effect:(me)=>deal(me,opp(me),5)},
+  {id:"L05", type:"skill", elem:"L", name:"無條件支持", cost:2, desc:"本回合攻擊 +3。", effect:(me)=>addTag(me,"atk+3",1)},
+  {id:"L06", type:"skill", elem:"L", name:"我是你爹", cost:4, desc:"所有光屬回 2 並抽 1（1v1：自己生效）。", effect:(me)=>{heal(me,2);draw(me,1)}},
+  {id:"L07", type:"skill", elem:"L", name:"別作弊", cost:4, desc:"將棄牌區 1 張技能放到牌底（提示）。", effect:(me)=>log('提示：請從棄牌區選 1 張技能放回牌底')},
+  {id:"L08", type:"skill", elem:"L", name:"假笑(小)", cost:1, desc:"對單體 1 傷；暗屬 +1。", effect:(me)=>{const t=opp(me);deal(me,t,1+(t.elem==='D'?1:0))}},
+  {id:"L09", type:"skill", elem:"L", name:"懂的都懂", cost:2, desc:"回 2。", effect:(me)=>heal(me,2)},
+  // 光角色專屬
+  {id:"RL01", type:"skill", elem:"L", name:"神聖祝福（渣男專）", cost:3, desc:"回 1；本回合攻擊 +2。", effect:(me)=>{heal(me,1);addTag(me,"atk+2",1)}},
+  {id:"NL01", type:"skill", elem:"L", name:"聖光治療（暖女專）", cost:4, desc:"我方所有角色各回 2（1v1：自己 +2）。", effect:(me)=>heal(me,2)},
+
+  /* 🌑 暗 */
+  {id:"D01", type:"skill", elem:"D", name:"耍個心機", cost:6, desc:"對單體 4 傷；自己回 2。", effect:(me)=>{deal(me,opp(me),4);heal(me,2)}},
+  {id:"D02", type:"skill", elem:"D", name:"不痛不癢", cost:3, desc:"指定角色攻擊 -2，持續兩回合（提示）。", effect:(me)=>log('提示：攻擊 -2，持續兩回合（未強制）')},
+  {id:"D03", type:"skill", elem:"D", name:"我是誰？我在哪？", cost:3, desc:"所有角色各 -2（1v1：雙方 -2）。", effect:(me)=>dealAll(me,2)},
+  {id:"D04", type:"skill", elem:"D", name:"不講武德", cost:2, desc:"奪取對手 2 能量（回合末歸還；提示）。", effect:(me)=>log('提示：請從對手挪 2 點能量到你（回合末歸還）')},
+  {id:"D05", type:"skill", elem:"D", name:"連續傷害", cost:4, desc:"對單體 2 傷，持續 3 回合（DoT 未實作）。", effect:(me)=>deal(me,opp(me),2)},
+  {id:"D06", type:"skill", elem:"D", name:"抱歉了隊友～", cost:0, desc:"犧牲我方一名角色，對敵 8 傷（1v1 先造成 8 並提示）。", effect:(me)=>{deal(me,opp(me),8);log('提示：應犧牲我方角色（1v1 暫略）')}},
+  {id:"D07", type:"skill", elem:"D", name:"讓你走了嗎", cost:5, desc:"棄牌區撿回 1 張到手；將手上 1 張放牌底（提示）。", effect:(me)=>log('提示：請從棄牌區拿 1 張到手，再將手上 1 張放回牌底')},
+  {id:"D08", type:"skill", elem:"D", name:"偷偷截圖", cost:1, desc:"對單體 1 傷，並檢視對手手牌 1 張（提示）。", effect:(me)=>{deal(me,opp(me),1);log('提示：檢視對手手牌 1 張')}},
+  {id:"D09", type:"skill", elem:"D", name:"心機滿滿", cost:2, desc:"對單體 2 傷；對手下回合技能耗能 +1。", effect:(me)=>{deal(me,opp(me),2);addTag(opp(me),'skillCost+1',1)}},
+  // 暗角色專屬
+  {id:"RD01", type:"skill", elem:"D", name:"靈魂汲取（渣男專）", cost:5, desc:"對單體 5 傷；若目標 <10 再 +2。", effect:(me)=>{const t=opp(me);deal(me,t,5+(t.core<10?2:0))}},
+  {id:"ND01", type:"skill", elem:"D", name:"靈魂震盪（渣女專）", cost:3, desc:"對單體 2 傷；敵方下回合技能耗能 +1。", effect:(me)=>{deal(me,opp(me),2);addTag(opp(me),'skillCost+1',1)}},
+
+  /* 🌀 清流（都 0 費；照你規則：抽牌從整倉抽，不只技能） */
+  {id:"C01", type:"skill", elem:"C", name:"購物清單", cost:0, desc:"抽 2 張牌。", effect:(me)=>draw(me,2)},
+  {id:"C02", type:"skill", elem:"C", name:"浪子回頭", cost:0, desc:"從棄牌區選 1 張技能回手（提示）。", effect:(me)=>log('提示：請從棄牌區選 1 張技能加入手牌')},
+  {id:"C03", type:"skill", elem:"C", name:"拒當備胎", cost:0, desc:"棄 1 張『攻擊技能』→ 抽 2 張技能（提示）。", effect:(me)=>log('提示：請棄 1 張攻擊技能，然後抽 2 張技能')},
+  {id:"C04", type:"skill", elem:"C", name:"我要拼命！", cost:0, desc:"自己 -2；抽 3 張（從整倉抽）。", effect:(me)=>{deal(me,me,2); draw(me,3)}},
+  {id:"C05", type:"skill", elem:"C", name:"清醒的人", cost:0, desc:"本回合技能耗能 -1（原規：需先棄 1 張回復技能）。", effect:(me)=>{costMinusOne(me);log('提示：原規需先棄 1 張回復技能')}} ,
+  {id:"C06", type:"skill", elem:"C", name:"上帝視角", cost:0, desc:"看牌堆上 5 張，選 1 入手，其餘置底（提示）。", effect:(me)=>log('提示：請檢視牌堆上 5 張，自選 1 入手，其餘置底')},
+  {id:"C07", type:"skill", elem:"C", name:"垃圾回收", cost:0, desc:"棄牌區隨機回收 2 張技能洗回牌堆（提示）。", effect:(me)=>log('提示：請從棄牌區隨機 2 張洗回牌堆')},
+  {id:"C08", type:"skill", elem:"C", name:"艱難抉擇", cost:0, desc:"抽 3 張（你可手動留 1 丟 2）。", effect:(me)=>{draw(me,3);log('提示：從新抽的 3 張中手動留 1、丟 2')}} ,
+  {id:"C09", type:"skill", elem:"C", name:"公平交易", cost:0, desc:"回 4；棄 4 張技能卡（此版先回 4 並提示）。", effect:(me)=>{heal(me,4);log('提示：請棄 4 張技能卡')}} ,
+
+  /* 📜 事件 EV01 ~ EV31 */
+  {id:"EV01", type:"event", elem:"F", name:"火屬攻擊+2", cost:3, desc:"本回合火屬攻擊 +2。", effect:(me)=>addTag(me,'atk+2',1)},
+  {id:"EV02", type:"event", elem:"F", name:"全體傷害2(火)", cost:2, desc:"所有玩家各 -2。", effect:(me)=>dealAll(me,2)},
+  {id:"EV03", type:"event", elem:"F", name:"技能耗能+1(火)", cost:2, desc:"指定玩家下回合技能耗能 +1（提示：1v1 = 對手）。", effect:(me)=>addTag(opp(me),'skillCost+1',1)},
+  {id:"EV04", type:"event", elem:"W", name:"水屬回復+2", cost:3, desc:"水屬角色回 2（1v1 = 自己若是水）。", effect:(me)=>{ if(me.elem==='W') heal(me,2); else log('提示：原規限水屬')}} ,
+  {id:"EV05", type:"event", elem:"W", name:"禁止攻擊(水)", cost:2, desc:"指定玩家本回不能攻擊（1v1=對手）。", effect:(me)=>blockAttack(opp(me))},
+  {id:"EV06", type:"event", elem:"W", name:"敵方-1核心", cost:2, desc:"對手 -1。", effect:(me)=>deal(me,opp(me),1)},
+  {id:"EV07", type:"event", elem:"E", name:"非土攻擊-2", cost:3, desc:"非土角色本回攻擊 -2（提示）。", effect:(me)=>log('提示：非土角色攻擊 -2（未強制）')},
+  {id:"EV08", type:"event", elem:"E", name:"核心+3(土)", cost:3, desc:"自己 +3。", effect:(me)=>heal(me,3)},
+  {id:"EV09", type:"event", elem:"E", name:"封鎖技能(土)", cost:2, desc:"指定玩家技能無法使用一回合（提示）。", effect:(me)=>log('提示：指定玩家技能無法使用一回合（未強制）')},
+  {id:"EV10", type:"event", elem:"L", name:"光屬+2攻擊回復1", cost:4, desc:"本回攻 +2 並回 1。", effect:(me)=>{addTag(me,'atk+2',1);heal(me,1)}},
+  {id:"EV11", type:"event", elem:"L", name:"第一次受傷-3(光)", cost:4, desc:"本回第一次受傷 -3（近似）。", effect:(me)=>addTag(me,'-3dmg',1)},
+  {id:"EV12", type:"event", elem:"L", name:"回復2(光)", cost:4, desc:"自己 +2。", effect:(me)=>heal(me,2)},
+  {id:"EV13", type:"event", elem:"D", name:"暗屬耗能+1", cost:4, desc:"本回暗屬使用技能耗能 +1（提示）。", effect:(me)=>log('提示：暗屬本回技能耗能 +1（未強制）')},
+  {id:"EV14", type:"event", elem:"D", name:"禁止攻擊(暗)", cost:2, desc:"指定玩家不能攻擊（1v1=對手）。", effect:(me)=>blockAttack(opp(me))},
+  {id:"EV15", type:"event", elem:"D", name:"全體傷害2(暗)", cost:4, desc:"所有玩家各 -2。", effect:(me)=>dealAll(me,2)},
+  {id:"EV16", type:"event", elem:"F", name:"單體3傷害", cost:4, desc:"對單體 3 傷。", effect:(me)=>deal(me,opp(me),3)},
+  {id:"EV17", type:"event", elem:"W", name:"單體2傷害回1", cost:4, desc:"對單體 2 傷；自己回 1。", effect:(me)=>{deal(me,opp(me),2);heal(me,1)}},
+  {id:"EV18", type:"event", elem:"E", name:"攻擊-2/-1", cost:3, desc:"指定玩家攻擊-2 且下回合 -1（提示）。", effect:(me)=>log('提示：攻擊 -2，次回合 -1（未強制）')},
+  {id:"EV19", type:"event", elem:"L", name:"單體-2核心", cost:3, desc:"對單體 2 傷。", effect:(me)=>deal(me,opp(me),2)},
+  {id:"EV20", type:"event", elem:"D", name:"奪取2能量", cost:0, desc:"從對手奪 2 能量（回合末歸還；提示）。", effect:(me)=>log('提示：請從對手移 2 能量到你（回合末歸還）')},
+  {id:"EV21", type:"event", elem:"F", name:"火屬+1攻擊全體-1", cost:3, desc:"本回攻 +1；所有角色 -1。", effect:(me)=>{addTag(me,'atk+1',1);dealAll(me,1)}},
+  {id:"EV22", type:"event", elem:"W", name:"水屬+1回復敵方+1耗能", cost:2, desc:"自己回 1；敵下回合技能耗能 +1。", effect:(me)=>{heal(me,1);addTag(opp(me),'skillCost+1',1)}},
+  {id:"EV23", type:"event", elem:"E", name:"非土技能+1耗能", cost:2, desc:"非土角色下回合技能耗能 +1（提示）。", effect:(me)=>log('提示：非土技能下回合耗能 +1（未強制）')},
+  {id:"EV24", type:"event", elem:"L", name:"攻擊+1回復+1", cost:3, desc:"本回攻 +1；自己回 1。", effect:(me)=>{addTag(me,'atk+1',1);heal(me,1)}},
+  {id:"EV25", type:"event", elem:"W", name:"第一次受傷-3(水)", cost:4, desc:"本回第一次受傷 -3（近似）。", effect:(me)=>addTag(me,'-3dmg',1)},
+  {id:"EV26", type:"event", elem:"D", name:"非暗-1核心", cost:2, desc:"所有非暗角色 -1（1v1：若對手非暗）。", effect:(me)=>{const t=opp(me); if(t.elem!=='D') deal(me,t,1); }},
+  {id:"EV27", type:"event", elem:"F", name:"指定3傷害回1", cost:4, desc:"對單體 3 傷；自己回 1。", effect:(me)=>{deal(me,opp(me),3);heal(me,1)}},
+  {id:"EV28", type:"event", elem:"E", name:"攻擊-1回復2", cost:3, desc:"自己回 2；攻 -1（提示）。", effect:(me)=>{heal(me,2);log('提示：攻擊 -1（未強制）')}},
+  {id:"EV29", type:"event", elem:"L", name:"技能耗能-1", cost:0, desc:"本回技能耗能 -1。", effect:(me)=>costMinusOne(me)},
+  {id:"EV30", type:"event", elem:"D", name:"非暗-1，暗+1回復", cost:2, desc:"非暗 -1；暗 +1 回復（提示）。", effect:(me)=>log('提示：非暗 -1；暗 +1 回復（未強制）')},
+  {id:"EV31", type:"event", elem:"D", name:"超過6傷→封鎖被動", cost:3, desc:"若對方本回造成 >6 傷，則其下回合被動封鎖（提示）。", effect:(me)=>log('提示：若對方 >6 傷 → 封鎖被動（未強制）')},
+];
+
+/* ========= 狀態 ========= */
+let G={players:[],turn:0,turnIndex:0,over:false};
+function mkP(id){return{
+  id, elem:"W", role:"ZN",
+  core:35,
+  energy:0, energyUsed:0,
+  hand:[], deck:[], discard:[],
+  tags:{},
+  atkUsed:false, passiveUsed:false,
+  tempStolen:0, nullified:false, tookDamage:false,
+  firstTurn:true
+}}
+function cur(){return G.players[G.turn]}
+function opp(p){return G.players[1-p.id]}
+function who(p){return p.id===0?"玩家A":"玩家B"}
+
+/* ========= 工具 ========= */
+const $=id=>document.getElementById(id);
+function log(t){const el=$("log"); el.innerText+=(el.innerText?'\n':'')+t; el.scrollTop=el.scrollHeight;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
+function addTag(p,k,v=1){p.tags[k]=(p.tags[k]||0)+v;}
+function rmTag(p,k){delete p.tags[k];}
+function addBuff(p,k,t=1){addTag(p,k,t);}
+function tapFX(btn){ if(!btn)return; btn.classList.add('btn-press'); setTimeout(()=>btn.classList.remove('btn-press'),120); }
+function roleKey(p){ return `${p.elem}_${p.role}`; }
+
+/* ========= 暗被動旗標與校正 ========= */
+function armDzm(p){ p.tags.dzm_steal_on_hit={armed:1,owner:p.id,ownerKey:'D_ZM'}; }
+function disarmDzm(p){ delete p.tags.dzm_steal_on_hit; }
+function armDzn(p){ p.tags.dzn_force_discard_once={armed:1,owner:p.id,ownerKey:'D_ZN'}; }
+function disarmDzn(p){ delete p.tags.dzn_force_discard_once; }
+function sanitizeDarkPassives(p){
+  const key=roleKey(p);
+  if(p.tags.dzm_steal_on_hit){
+    const o=p.tags.dzm_steal_on_hit;
+    if(key!=='D_ZM'||o.owner!==p.id||o.ownerKey!=='D_ZM') disarmDzm(p);
+  } else if(key!=='D_ZM'){ disarmDzm(p); }
+  if(p.tags.dzn_force_discard_once){
+    const o=p.tags.dzn_force_discard_once;
+    if(key!=='D_ZN'||o.owner!==p.id||o.ownerKey!=='D_ZN') disarmDzn(p);
+  } else if(key!=='D_ZN'){ disarmDzn(p); }
 }
 
-</script>
-<script>
-    function checkPassword() {
-        var password = document.getElementById('password').value;
+/* ========= 初始化 ========= */
+document.addEventListener("DOMContentLoaded",()=>{
+  updateRoleOptions(0); updateRoleOptions(1);
+  $("startBtn").onclick=(e)=>{tapFX(e.target); startGame();};
+  $("btnEnd").onclick=(e)=>{tapFX(e.target); endTurn();};
+});
+function updateRoleOptions(pid){
+  const elem=$(`p${pid}-elem`).value, sel=$(`p${pid}-role`);
+  sel.innerHTML=(ALLOWED[elem]||[]).map(code=>`<option value="${code}">${ROLE[code]}</option>`).join('');
+}
 
-        if (password === 'B.T.X') {
-            window.location.href = '/chat';
-        } else if (password === 'Tim920211') {
-            window.location.href = '/admin';
-        } else {
-            alert('密码错误，请重试！');
+/* ========= 流程 ========= */
+function startGame(){
+  G.players=[mkP(0),mkP(1)];
+  for(const p of G.players){
+    p.elem=$(`p${p.id}-elem`).value;
+    p.role=$(`p${p.id}-role`).value;
+    p.deck=shuffle([...CARDS]); // 各自獨立牌庫
+    p.hand=[]; p.discard=[]; p.tags={}; p.energy=0; p.energyUsed=0; p.atkUsed=false; p.passiveUsed=false; p.tempStolen=0; p.firstTurn=true;
+    disarmDzn(p); disarmDzm(p);
+    draw(p,5);
+  }
+  G.turn=0; G.turnIndex=0; G.over=false;
+  $("setup").style.display="none";
+  $("board").style.display="";
+  $("logPanel").style.display="";
+  log("對局開始！普攻不耗能、每回一次；每位玩家**自己的第一回合**禁止普攻。");
+  startOfTurn(); ui();
+}
+function startOfTurn(){
+  const me=cur(), op=opp(cur());
+  drawStart(me);
+
+  me.energyUsed=0; me.atkUsed=false; me.passiveUsed=false;
+  me.nullified=false; me.tookDamage=false;
+
+  // 清回合 Buff
+  ['atk+1','atk+2','atk+3','-3dmg','armor-1','silenceAtk','reduceDamage1',
+   'enableNullify','skillCost+1','skillCost-1','blockEvent','thornDiscard1','drawBlock1'].forEach(k=>rmTag(me,k));
+
+  // 雙向校正
+  if(roleKey(me)!=='D_ZN') disarmDzn(me);
+  if(roleKey(me)!=='D_ZM') disarmDzm(me);
+  if(roleKey(op)!=='D_ZN') disarmDzn(op);
+  if(roleKey(op)!=='D_ZM') disarmDzm(op);
+  sanitizeDarkPassives(me); sanitizeDarkPassives(op);
+
+  ui();
+}
+function endTurn(){
+  const me=cur(), op=opp(me);
+  // 暗渣男：回合結束歸還暫借能量
+  if(me.tempStolen>0){
+    const give=Math.min(me.tempStolen, me.energy);
+    me.energy-=give; op.energy+=give;
+    log(`${who(me)} 歸還暫借能量 ${give}`);
+    me.tempStolen=0;
+  }
+  if(me.firstTurn) me.firstTurn=false;
+  G.turn=1-G.turn; G.turnIndex++; startOfTurn();
+}
+
+/* ========= 抽牌/能量 ========= */
+function drawStart(p){
+  const enemy=opp(p);
+  if(enemy.tags && enemy.tags.drawBlock1){
+    rmTag(enemy,'drawBlock1'); log(`${who(enemy)} 被動：${who(p)} 本回合開始少抽 1（實抽 0）`); return;
+  }
+  draw(p,1);
+}
+function draw(p,n){
+  let got=0;
+  for(let i=0;i<n;i++){
+    if(p.deck.length===0){ p.deck=shuffle(p.discard.splice(0)); if(p.deck.length) log(`${who(p)} 洗回牌庫`); }
+    if(p.deck.length===0){ log(`${who(p)} 無牌可抽`); break; }
+    p.hand.push(p.deck.pop()); got++;
+  }
+  if(got>0) log(`${who(p)} 抽了 ${got} 張`);
+}
+function playEnergyAt(p,idx,btn){
+  tapFX(btn);
+  const c=p.hand[idx]; if(!c||c.type!=='energy') return;
+  if(p.energy>=10) return alert("能量已滿（10）");
+  p.hand.splice(idx,1); p.energy++;
+  log(`${who(p)} 放 1 能量（${p.energy}/10）`); ui();
+}
+
+/* ========= 戰鬥 ========= */
+function basicAttack(btn=null){
+  const p=cur(), t=opp(p);
+  tapFX(btn);
+  if(G.over) return;
+  if(p.firstTurn) return alert("你的第一個回合不能攻擊");
+  if(p.atkUsed) return alert("本回合已普攻過");
+  if(p.tags.silenceAtk) return alert("本回合被禁止普攻");
+
+  // 土渣女：普攻前須棄 1（她有啟動被動時）
+  const enemy=opp(p);
+  if(enemy.elem==='E'&&enemy.role==='ZN'&&enemy.tags.thornDiscard1){
+    discardRnd(p,1); rmTag(enemy,'thornDiscard1');
+    log(`${who(enemy)} 被動：你普攻 → 你隨機棄 1`);
+  }
+
+  p.atkUsed=true;
+  let dmg=(ROLE_DAMAGE[p.role]||1);
+  if(p.elem==="F") dmg+=1; // 火普攻+1
+  if(p.elem==="L" && p.role==="ZM"){ if(p.core<=5) dmg+=2; else if(p.core<=10) dmg+=1; }
+  dmg += (p.tags['atk+1']||0)*1 + (p.tags['atk+2']||0)*2 + (p.tags['atk+3']||0)*3;
+
+  const before=t.core;
+  hit(t,dmg,p); // 立即扣血
+  const after=t.core;
+  log(`${who(p)} 普攻：對 ${who(t)} 扣 ${Math.max(0,before-after)}（${before}→${after}）`);
+
+  // 命中後元素效果（❌ 暗已移除丟牌）
+  if(p.elem==="W"){ heal(p,1); log("水：回 +1"); }
+  if(p.elem==="E"){ addTag(p,'armor-1',1); log("土：獲得 -1 減傷至下回合"); }
+  if(p.elem==="L"){ heal(p,1); log("光：回 +1"); }
+
+  ui(); checkWin();
+}
+
+function hit(target,n,attacker=null){
+  if(n<=0) return;
+
+  // 光暖女免傷（需按被動）
+  if(target.elem==='L' && target.role==='NW' && target.tags.enableNullify && !target.nullified){
+    target.nullified=true; log('光暖女：第一次傷害無效'); return;
+  }
+
+  // 減傷
+  let dmg=n;
+  if(target.tags['-3dmg']) dmg=Math.max(0,dmg-3);
+  if(target.tags['armor-1']) dmg=Math.max(0,dmg-1);
+  if(target.tags['reduceDamage1']) dmg=Math.max(0,dmg-1);
+
+  // 暗渣男：首次被攻擊 → 暫借 1 能量
+  if(target.tags.dzm_steal_on_hit){
+    const pack=target.tags.dzm_steal_on_hit;
+    const ok=pack.armed && pack.owner===target.id && pack.ownerKey==='D_ZM' && roleKey(target)==='D_ZM';
+    if(ok){
+      const atk=attacker||opp(target);
+      if(atk.energy>0){
+        atk.energy-=1; target.energy+=1; target.tempStolen+=1;
+        log(`暗渣男被動觸發：暫借 ${who(atk)} 1 能量 → ${who(target)} ${target.energy}/10`);
+      }else{
+        log(`暗渣男被動：對手沒有能量，無法暫借`);
+      }
+    }
+    disarmDzm(target); // 一次性
+  }
+
+  if(dmg<=0){ log(`${who(target)} 減傷後 0`); return; }
+  const before=target.core;
+  target.core=Math.max(0, target.core-dmg);
+  target.tookDamage=true;
+  log(`${who(target)} 受到 ${dmg} 傷（${before}→${target.core}）`);
+}
+
+/* ========= 出牌 / 被動 ========= */
+function playCard(p,idx,btn){
+  tapFX(btn);
+  if(G.over||G.turn!==p.id) return;
+  const c=p.hand[idx]; if(!c) return;
+
+  // 出牌者不可能帶著暗渣男/暗渣女旗標
+  if(roleKey(p)!=='D_ZN') disarmDzn(p);
+  if(roleKey(p)!=='D_ZM') disarmDzm(p);
+
+  if(c.type==="energy"){ playEnergyAt(p,idx,btn); return; }
+
+  // 事件封鎖？
+  if(c.type==="event" && p.tags.blockEvent) return alert("本回合無法使用事件卡");
+
+  let cost = Math.max(0, (c.cost||0) + (p.tags['skillCost+1']?1:0) + (p.tags['skillCost-1']?-1:0));
+  const avail = p.energy - p.energyUsed;
+  if(cost > avail) return alert("能量不足");
+
+  // ✅ 判定『暗渣女被動』是否需要在這張牌後觸發
+  const enemy=opp(p);
+  const willTriggerDzn = (enemy.elem==='D' && enemy.role==='ZN' &&
+                          enemy.tags && enemy.tags.dzn_force_discard_once &&
+                          enemy.tags.dzn_force_discard_once.armed &&
+                          enemy.tags.dzn_force_discard_once.owner===enemy.id &&
+                          enemy.tags.dzn_force_discard_once.ownerKey==='D_ZN' &&
+                          c.type!=='energy');
+
+  // 先正常出牌
+  p.energyUsed += cost;
+  c.effect(p);
+
+  // 移走被打出的牌（避免被動隨機棄到同一張）
+  p.discard.push(c); p.hand.splice(idx,1);
+  log(`${who(p)} 使用【${c.name}】（費 ${cost}）`);
+
+  // 再觸發暗渣女被動的「隨機棄 1」（若有）
+  if (willTriggerDzn) {
+    if (p.hand.length>0) {
+      discardRnd(p,1);
+      log(`${who(enemy)} 被動觸發：你打出${c.type==='event'?'事件':'技能'} → 你隨機棄 1`);
+    } else {
+      log(`${who(enemy)} 被動觸發：但你沒有其他手牌可棄`);
+    }
+    disarmDzn(enemy); // 一次性
+  }
+
+  ui(); checkWin();
+}
+
+const PASSIVE={
+  F:{
+    ZM:(p)=>{ // 火渣男：棄 1 → 攻 +1
+      const pick=p.hand.filter(x=>x.type!=='energy');
+      if(pick.length===0) return alert("沒有可棄的牌");
+      pickOne(pick,(card)=>{
+        if(!card) return;
+        const i=p.hand.indexOf(card); p.discard.push(p.hand.splice(i,1)[0]);
+        addTag(p,'atk+1',1); log(`${who(p)} 被動：棄【${card.name}】 → 本回攻 +1`); ui();
+      });
+    },
+    NW:(p)=>{ // 火暖女：耗 1 能量 → 攻 +1
+      const avail=p.energy - p.energyUsed;
+      if(avail<=0) return alert("沒有可用能量");
+      p.energyUsed+=1; addTag(p,'atk+1',1);
+      log(`${who(p)} 被動：耗 1 能量 → 本回攻 +1`);
+    }
+  },
+  W:{
+    ZN:(p)=>{ addTag(opp(p),'drawBlock1',1); log(`${who(p)} 被動：對手下次抽牌 -1`); },
+    NM:(p)=>{ addTag(p,'nmPassiveOn',1); log(`${who(p)} 被動：若本回受傷，回末 +1`); }
+  },
+  E:{
+    ZN:(p)=>{ addTag(opp(p),'thornDiscard1',1); log(`${who(p)} 被動：對手下次普攻前須棄 1`); },
+    NW:(p)=>{ addTag(p,'reduceDamage1',1); log(`${who(p)} 被動：本回受傷 -1`); }
+  },
+  D:{
+    ZM:(p)=>{ disarmDzn(p); armDzm(p); log(`${who(p)} 被動：首次被攻擊時暫借 1 能量（回合末歸還）`); },
+    ZN:(p)=>{ disarmDzm(p); armDzn(p); log(`${who(p)} 被動：對手本回第一次打出技能/事件需隨機棄 1`); }
+  },
+  L:{
+    ZM:(p)=>{ const b=(p.core<=5)?2:(p.core<=10?1:0); if(!b){log(`${who(p)} 被動：目前血量無加成`);return;} addTag(p,b===2?'atk+2':'atk+1',1); log(`${who(p)} 被動：低血加攻 +${b}`); },
+    NW:(p)=>{ addTag(p,'enableNullify',1); log(`${who(p)} 被動：本回第一次受傷無效`); }
+  },
+  C:{ CL:(p)=>{ draw(p,1); log(`${who(p)} 被動：抽 1`); } }
+};
+function usePassive(btn=null){
+  const p=cur(); tapFX(btn);
+  if(G.over) return;
+  if(p.passiveUsed) return alert("本回合被動已使用過");
+
+  sanitizeDarkPassives(p);
+  const fn = PASSIVE[p.elem] && PASSIVE[p.elem][p.role];
+  if(!fn) return alert("此組合沒有被動設定");
+  fn(p);
+  p.passiveUsed=true;
+  sanitizeDarkPassives(p);
+  ui();
+}
+
+/* ========= 輔助 ========= */
+function deal(att,def,n){ let dmg=n + (att.tags['atk+1']||0)*1 + (att.tags['atk+2']||0)*2 + (att.tags['atk+3']||0)*3; hit(def,dmg,att); }
+function heal(p,n){ p.core=Math.min(35,p.core+n); ui(); }
+function discardRnd(p,n){ for(let i=0;i<n;i++){ if(p.hand.length===0)break; const idx=Math.floor(Math.random()*p.hand.length); p.discard.push(p.hand.splice(idx,1)[0]); } }
+function pickOne(cards,cb){ if(cards.length===0){cb(null);return;} const list=cards.map((c,i)=>`${i+1}. ${c.name}（費${c.cost??0}）`).join('\n'); const k=(parseInt(prompt(`選擇要丟棄的牌：\n${list}`),10)||0)-1; if(k<0||k>=cards.length){cb(null);return;} cb(cards[k]); }
+
+/* ========= UI ========= */
+function ui(){
+  $("turnTag").innerHTML=(G.turn===0?"玩家A":"玩家B")+"回合";
+  renderPlayer(G.players[0]); renderPlayer(G.players[1]);
+}
+function renderPlayer(p){
+  const div=$(`p${p.id}-panel`);
+  const passiveBadge=p.passiveUsed?`<span class="badge">本回已啟動被動</span>`:'';
+  const ft=p.firstTurn?`<span class="badge">首回不可普攻</span>`:'';
+
+  // 額外徽章：暗渣男女是否武裝
+  let extra='';
+  if(p.tags.dzn_force_discard_once) extra+=`<span class="badge warn">暗渣女：棄牌一次(待觸發)</span>`;
+  if(p.tags.dzm_steal_on_hit)       extra+=`<span class="badge ok">暗渣男：暫借能量(待觸發)</span>`;
+
+  div.innerHTML=`<h3>${who(p)} ${passiveBadge} ${ft} ${extra}</h3>
+    <div>屬性：${ELEM[p.elem]}　角色：${ROLE[p.role]}</div>
+    <div class='small'>${ROLEINFO[p.elem+"_"+p.role]||""}</div>
+    <div>核心 <span class='big'>${p.core}</span></div>
+    <div>能量 ${p.energy}/10（本回已用 ${p.energyUsed}）</div>
+    <button onclick="basicAttack(this)">普攻（不耗能）</button>
+    <button onclick="usePassive(this)" ${p.passiveUsed?'disabled':''}>被動（本回一次）</button>
+    <div class='row">${
+      p.hand.map((c,i)=>`<div class='card'>
+        <b>${c.name}</b><br>
+        <span class='small'>${c.elem?ELEM[c.elem]:''}｜費${c.cost ?? 0}｜${c.type==='event'?'事件':(c.type==='energy'?'能量':'技能')}</span>
+        <div class='small' style="margin-top:6px;line-height:1.3">${c.desc || '—'}</div>
+        <div style="margin-top:8px">
+          ${c.type==='energy'
+            ? `<button onclick="playCard(G.players[${p.id}], ${i}, this)">放能量</button>`
+            : `<button onclick="playCard(G.players[${p.id}], ${i}, this)">使用</button>`
+          }
+        </div>
+      </div>`).join("")
+    }</div>`;
+}
+
+/* ========= 勝負 ========= */
+function checkWin(){
+  if(G.over) return;
+  const p0=G.players[0], p1=G.players[1];
+  if(p0.core<=0||p1.core<=0){ G.over=true; alert((p0.core<=0?"玩家B":"玩家A")+" 勝利！"); }
+}
+  /* ===== BTX：模式切換 + 慢速 AI（貼在最底即可） ===== */
+(function(){
+  /* === 可調整參數 === */
+  const AUTO_START = false;  // 想自己選角色 → false（建議）；要自動開局 → true
+  const STEP_MS    = 900;    // 每步動作間隔（調大＝更慢、更像真人）
+  const CLICK_MS   = 350;    // 同一組連續點擊的間隔（例如連續幾張0費）
+  const ENERGY_TRIES_PER_TURN = 2; // 每回合最多放幾次能量
+
+  /* === 對話攔截：不阻塞流程 === */
+  (function(){
+    window.alert   = m=>{ try{ console.log('[AUTO-ALERT]', m);}catch(_){} };
+    window.confirm = m=>{ try{ console.log('[AUTO-CONFIRM]', m,'-> true');}catch(_){}; return true; };
+    window.prompt  = (m,d)=>{
+      try{
+        const lines=String(m||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
+        const opts=[];
+        for(const ln of lines){
+          const m1 = ln.match(/^(\d+)\.\s*.+?[\(（]\s*費\s*(\d+)\s*[\)）]/) || ln.match(/^(\d+)\./);
+          if(m1) opts.push({idx:+m1[1], cost:m1[2]?+m1[2]:9999});
         }
+        opts.sort((a,b)=>a.cost-b.cost || a.idx-b.idx);
+        const pick = (opts[0]?.idx)||1;
+        console.log('[AUTO-PROMPT]', m, '->', pick);
+        return String(pick);
+      }catch(e){ return d ?? '1'; }
+    };
+  })();
+
+  /* === 模式狀態與小面板 === */
+  const MODE = {
+    PVP: 'PVP',     // 玩家對玩家（都不自動）
+    PVE: 'PVE',     // 玩家對戰AI（只控玩家B）
+    AIAI: 'AIAI'    // AI對AI（兩邊都自動）
+  };
+  let currentMode = localStorage.getItem('BTX_MODE') || MODE.PVE; // 預設 PVE
+
+  const badge = document.createElement('div');
+  Object.assign(badge.style,{
+    position:'fixed',right:'8px',top:'8px',zIndex:99999,
+    background:'#1c1f3c',color:'#9fd3ff',padding:'6px 10px',
+    border:'1px solid #335',borderRadius:'8px',font:'12px/1.2 monospace'
+  });
+  badge.textContent='AI: waiting…';
+  document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(badge));
+
+  const panel = document.createElement('div');
+  Object.assign(panel.style,{
+    position:'fixed',right:'8px',top:'46px',zIndex:99999,
+    background:'#14172d',color:'#e9ebf1',padding:'6px',border:'1px solid #335',borderRadius:'8px',
+    font:'12px/1.2 system-ui',display:'flex',gap:'6px',alignItems:'center'
+  });
+  panel.innerHTML = `
+    <span style="opacity:.8">模式：</span>
+    <button data-mode="PVP">玩家對戰</button>
+    <button data-mode="PVE">玩家對戰AI</button>
+    <button data-mode="AIAI">AI對AI</button>
+  `;
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.body.appendChild(panel);
+    [...panel.querySelectorAll('button')].forEach(btn=>{
+      btn.style.cssText='background:#2c3160;color:#fff;border:1px solid #555;padding:6px 8px;border-radius:6px;cursor:pointer';
+      btn.addEventListener('click',()=>{
+        currentMode = btn.dataset.mode;
+        localStorage.setItem('BTX_MODE', currentMode);
+        highlightModeButtons();
+      });
+    });
+    highlightModeButtons();
+  });
+  function highlightModeButtons(){
+    [...panel.querySelectorAll('button')].forEach(b=>{
+      b.style.opacity = (b.dataset.mode===currentMode)? '1' : '.55';
+      b.style.outline = (b.dataset.mode===currentMode)? '2px solid #7fb2ff' : 'none';
+    });
+  }
+
+  /* === 工具 === */
+  const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+  function boardVisible(){ const b=document.getElementById('board'); return !!(b && getComputedStyle(b).display!=='none'); }
+  function curPid(){
+    const t=(document.getElementById('turnTag')?.innerText)||'';
+    return t.includes('玩家A')?0: t.includes('玩家B')?1: null;
+  }
+  function pnl(pid){ return document.getElementById('p'+pid+'-panel'); }
+  function findBtn(root,label){
+    const btns=(root||document).querySelectorAll('button');
+    for(const b of btns){ if((b.innerText||'').includes(label) && !b.disabled) return b; }
+    return null;
+  }
+  function cardInfos(panelEl){
+    const out=[];
+    panelEl?.querySelectorAll('.card').forEach(card=>{
+      const small=card.querySelector('.small');
+      const btn=[...card.querySelectorAll('button')].find(b=>/使用|放能量/.test(b.innerText));
+      if(!btn) return;
+      const s=small?small.innerText:'';
+      const m=s.match(/費\s*([0-9]+)/);
+      const cost=m?parseInt(m[1],10):0;
+      const isEnergy=/能量/.test(s)||/放能量/.test(btn.innerText);
+      out.push({btn,cost,isEnergy});
+    });
+    return out;
+  }
+  function readEnergy(panelEl){
+    const txt=(panelEl?.innerText||'').replace(/\s/g,'');
+    const m=txt.match(/能量(\d+)\/10（本回已用(\d+)）/);
+    return {pool:m?+m[1]:0, used:m?+m[2]:0};
+  }
+  function aiControls(pid){
+    if(currentMode===MODE.PVP)  return false;            // 都不控
+    if(currentMode===MODE.PVE)  return pid===1;          // 控玩家B
+    if(currentMode===MODE.AIAI) return true;             // 兩邊都控
+    return false;
+  }
+
+  /* === 自動按開始（只有 AUTO_START=true 才會） === */
+  async function autoStart(){
+    if(!AUTO_START) return;
+    if(boardVisible()) return;
+    const start=document.getElementById('startBtn');
+    if(start){ start.click(); await sleep(250); }
+  }
+
+  /* === 每回合 AI 腳本（慢速） === */
+  const firstTurnSkip={0:true,1:true};
+  let busy=false, lastIdx=-1;
+
+  async function doTurn(){
+    if(busy) return;
+
+    if(!boardVisible()){ await autoStart(); return; }
+
+    const pid = curPid(); if(pid===null) return;
+    if(!aiControls(pid)) { badge.textContent=`AI: ${currentMode}（P${pid}由玩家操作）`; return; }
+
+    // 若有 G.turnIndex 就防重複，沒有就每輪跑一次
+    try{
+      if(window.G && typeof G.turnIndex==='number'){
+        if(G.turnIndex===lastIdx) return;
+        lastIdx = G.turnIndex;
+      }
+    }catch(_){}
+
+    const panelEl = pnl(pid); if(!panelEl) return;
+    busy=true; badge.textContent=`AI: thinking (P${pid}, ${currentMode})`;
+
+    // 1) 放能量（慢速，最多 ENERGY_TRIES_PER_TURN 次）
+    for(let k=0;k<ENERGY_TRIES_PER_TURN;k++){
+      const en = cardInfos(panelEl).find(c=>c.isEnergy);
+      if(en){ en.btn.click(); await sleep(CLICK_MS); }
     }
-</script>
+    await sleep(STEP_MS);
 
-
-<div class="input-container" style="display:none;">
-    <input type="file" id="file-inputha">
-    <button onclick="sendImage()">上传照片</button>
-    <br>
-    <input type="text" id="message-inputha" placeholder="输入消息">
-    <button onclick="sendMessage()">发送</button>
-</div>
-
-<div class="code-editor" id="code-editor" style="display:none;">
-    <textarea id="code"></textarea>
-    <button onclick="saveCode()">保存代码</button>
-</div>
-
-<script>
-    function checkPassword() {
-        var password = document.getElementById('password').value;
-
-        if (password === 'Tim920211') {
-            // 密码正确，显示后台管理界面
-            document.getElementById('password').style.display = 'none';
-            document.getElementById('chat-container').style.display = 'block';
-            document.querySelector('.input-container').style.display = 'block';
-            document.getElementById('code-editor').style.display = 'block';
-        } else {
-            alert('密码错误，请重试！');
+    // 2) 0費技能（全部）
+    {
+      let again=true, guard=0;
+      while(again && guard++<8){
+        again=false;
+        const zeros = cardInfos(panelEl).filter(c=>!c.isEnergy && c.cost===0);
+        if(zeros.length){
+          for(const z of zeros){ z.btn.click(); await sleep(CLICK_MS); }
+          again=true;
+          await sleep(STEP_MS);
         }
+      }
     }
 
-    function sendMessage() {
-        var messageInput = document.getElementById('message-input');
-        var messageText = messageInput.value;
-
-        if (messageText.trim() !== '') {
-            var chatContainer = document.getElementById('chat-container');
-
-            var adminMessage = document.createElement('div');
-            adminMessage.classList.add('message', 'admin-message');
-            adminMessage.textContent = messageText;
-
-            chatContainer.appendChild(adminMessage);
-            messageInput.value = '';
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+    // 3) 一張可支付技能
+    {
+      const {pool,used}=readEnergy(panelEl);
+      const left=Math.max(0,pool-used);
+      const picks=cardInfos(panelEl).filter(c=>!c.isEnergy && c.cost>0 && c.cost<=left);
+      if(picks.length){ picks[0].btn.click(); await sleep(STEP_MS); }
     }
 
-    function sendImage() {
-        var fileInput = document.getElementById('file-input');
-        var file = fileInput.files[0];
-
-        if (file) {
-            var chatContainer = document.getElementById('chat-container');
-
-            var adminMessage = document.createElement('div');
-            adminMessage.classList.add('message', 'admin-message');
-
-            var imageElement = document.createElement('img');
-            imageElement.src = URL.createObjectURL(file);
-            imageElement.style.maxWidth = '300px';
-            adminMessage.appendChild(imageElement);
-
-            chatContainer.appendChild(adminMessage);
-
-            fileInput.value = '';
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+    // 4) 被動
+    {
+      const pass=findBtn(panelEl,'被動');
+      if(pass){ pass.click(); await sleep(STEP_MS); }
     }
 
-    function saveCode() {
-        var codeInput = document.getElementById('code');
-        var codeText = codeInput.value;
-
-        // 在这里添加保存代码的逻辑
-        // 例如发送到后端进行保存
-        alert('代码已保存！');
+    // 5) 普攻（各自第一回合略過）
+    {
+      if(!firstTurnSkip[pid]){
+        const atk=findBtn(panelEl,'普攻');
+        if(atk){ atk.click(); await sleep(STEP_MS); }
+      }else firstTurnSkip[pid]=false;
     }
-</script>
-	<div id="chat-mode-selector" style="display:block;">
-    <label for="chat-mode">选择聊天模式：</label>
-    <select id="chat-mode" onchange="toggleChatMode()">
-        <option value="all">多人</option>
-        <option value="admin">個人</option>
-    </select>
-</div>
 
-<script>
-    function toggleChatMode() {
-        var modeSelector = document.getElementById('chat-mode');
-        var selectedMode = modeSelector.value;
+    // 6) 結束回合
+    {
+      const end=document.getElementById('btnEnd')||findBtn(document,'結束回合');
+      if(end){ end.click(); await sleep(STEP_MS); }
+    }
 
-        if (selectedMode === 'admin') {
-            // 显示与管理员聊天的UI，隐藏其他聊天室的UI
-        } else {
-            // 显示所有人聊天的UI，隐藏其他聊天室的UI
-        }
-    }
-</script>
-	
-<script>
-    // 當網頁載入時
-    window.onload = function() {
-        // 獲取聊天對話的容器
-        var chatContainer = document.getElementById("chat-container");
-        
-        // 當瀏覽器窗口被關閉時
-        window.onbeforeunload = function() {
-            // 刪除聊天對話
-            chatContainer.innerHTML = "";
-        }
-    }
+    badge.textContent=`AI: done (P${pid})`;
+    busy=false;
+  }
+
+  // 穩定輪詢
+  setInterval(doTurn, STEP_MS);
+})();
 </script>
 </body>
-	</html>
-	
+</html>
